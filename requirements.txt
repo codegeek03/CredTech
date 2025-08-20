@@ -1,0 +1,3 @@
+financial-news-api
+earningscall
+python-dotenv
