@@ -9,3 +9,7 @@ scikit-learn
 numpy 
 finnhub-python 
 python-dotenv
+yfinance>=0.2.43
+pandas>=2.0
+numpy>=1.25
+scipy>=1.10
