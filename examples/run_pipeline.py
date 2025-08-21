@@ -1,7 +1,7 @@
 # examples/run_pipeline.py
 import argparse
 import pandas as pd
-from credit_features.core import CreditFeaturePipeline
+from Data_connector.financial_features import CreditFeaturePipeline
 
 # --- Default US-20 universe (no args needed) ---
 DEFAULT_TICKERS = [
