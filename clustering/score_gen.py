@@ -9,7 +9,7 @@ import logging
 
 CONFIG = {
     "data": {
-        "filepath": r"C:\Users\shami\OneDrive\Documents\GitHub\CredTech\clustering\corporateCreditRatingWithFinancialRatios.csv",
+        "filepath": r"clustering/corporateCreditRatingWithFinancialRatios.csv",
         "required_columns": ['Corporation', 'Rating', 'Binary Rating']
     },
     "features": {
@@ -239,9 +239,40 @@ def scale_score_to_range(score_series: pd.Series, min_target: int, max_target: i
     return scaled_score.clip(min_target, max_target).round(0)
 
 
-def main():
+# --- NEW FUNCTION TO GET SCORE FOR A SINGLE COMPANY ---
+def get_company_scores(company_name: str, scores_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Retrieves the credit scores for a specific company from the DataFrame.
+
+    Args:
+        company_name: The name of the company to search for.
+        scores_df: The DataFrame containing the calculated scores.
+
+    Returns:
+        A pandas DataFrame with the scores for the specified company, 
+        or an empty DataFrame if the company is not found.
+    """
+    logging.info(f"Searching for scores for: {company_name}")
+    
+    # Filter the DataFrame to find the company
+    # The .str.contains() method allows for partial matches.
+    # The `case=False` argument makes the search case-insensitive.
+    company_data = scores_df[scores_df['Corporation'].str.contains(company_name, case=False, na=False)]
+
+    if company_data.empty:
+        logging.warning(f"No data found for a company with the name: {company_name}")
+        return pd.DataFrame() # Return an empty DataFrame if no match is found
+
+    # Return only the relevant columns
+    return company_data[['Corporation', 'Rating', 'Composite_Score', 'Logit_Score']]
+
+
+def main() -> pd.DataFrame | None:
     """
     Main function to execute the credit scoring pipeline.
+    
+    Returns:
+        A DataFrame with the final scores, or None if an error occurs.
     """
     try:
         # 1. Load and Preprocess Data
@@ -264,15 +295,47 @@ def main():
             CONFIG['scaling']['min_score'],
             CONFIG['scaling']['max_score']
         )
-
-        # 3. Display Final Results
+        
+        # 3. Prepare and Display Final Results
         logging.info("\n--- Final Credit Scores (0-1000) ---")
         final_results = processed_df[['Corporation', 'Rating', 'Composite_Score', 'Logit_Score']]
         print(final_results.sort_values(by='Logit_Score', ascending=False).to_string(index=False))
+        
+        return final_results
 
     except (FileNotFoundError, ValueError) as e:
         logging.error(f"A critical error occurred: {e}")
         logging.error("Pipeline execution aborted.")
+        return None
+
 
 if __name__ == "__main__":
-    main()
+    # Execute the main pipeline to process all data and calculate scores
+    all_company_scores_df = main()
+    
+    # Check if the main pipeline ran successfully before trying to fetch scores
+    if all_company_scores_df is not None:
+        print("\n" + "="*50)
+        print("--- FETCHING SCORES FOR SPECIFIC COMPANIES ---")
+        print("="*50)
+
+        # Example 1: A company that is likely in the dataset
+        company_to_find = "Microsoft" 
+        microsoft_scores = get_company_scores(company_to_find, all_company_scores_df)
+        print("===============================")
+        print(microsoft_scores.iloc[0]['Composite_Score'])
+        print("===============================")
+        if not microsoft_scores.empty:
+            print(f"\nScores for '{company_to_find}':\n", microsoft_scores.to_string(index=False))
+
+        # Example 2: Another company
+        company_to_find = "Apple"
+        apple_scores = get_company_scores(company_to_find, all_company_scores_df)
+        if not apple_scores.empty:
+            print(f"\nScores for '{company_to_find}':\n", apple_scores.to_string(index=False))
+            
+        # Example 3: A company that is NOT in the dataset
+        company_to_find = "NonExistent Company Inc"
+        non_existent_scores = get_company_scores(company_to_find, all_company_scores_df)
+        if non_existent_scores.empty:
+            print(f"\nCould not find scores for '{company_to_find}'. This is expected.")
