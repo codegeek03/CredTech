@@ -27,43 +27,83 @@ class StockInsightAgent:
                 "including price trends, volatility, and key financial metrics."
             ),
             model=Gemini(id="gemini-2.0-flash"),
-            tools=[
-                YFinanceTools()
-            ],
-            markdown=True
+            tools=[YFinanceTools()],
+            markdown=True,
         )
 
     def build_prompt(self, financial_data: dict) -> str:
         """
         Build a structured prompt using the provided financial dataset.
-        
-        Expected keys: Rating Agency, Corporation, Rating, Rating Date, CIK,
-        Binary Rating, SIC Code, Sector, Ticker, Current Ratio, 
-        Long-term Debt / Capital, Debt/Equity Ratio, Gross Margin, 
-        Operating Margin, EBIT Margin, EBITDA Margin, Pre-Tax Profit Margin, 
-        Net Profit Margin, Asset Turnover, ROE, Return On Tangible Equity, 
-        ROA, ROI, Operating Cash Flow Per Share, Free Cash Flow Per Share.
+
+        Can handle both traditional financial data and credit scoring data.
         """
 
         # Convert financial_data dict to readable format
         formatted_data = "\n".join([f"{k}: {v}" for k, v in financial_data.items()])
 
-        prompt = f"""
-        You are a financial insights assistant. 
-        Analyze the stock and credit profile for {financial_data.get("Corporation", self.ticker)}.
+        company_name = financial_data.get("Corporation", self.ticker)
+        ticker = financial_data.get("Ticker", self.ticker)
 
-        Provided Financial & Credit Data:
-        {formatted_data}
+        # Check if this is credit scoring data
+        if "Composite Credit Score" in financial_data:
+            prompt = f"""
+            You are a senior financial analyst and credit risk expert. 
+            Analyze the comprehensive credit profile for {company_name} ({ticker}).
 
-        Please generate a professional report covering:
-        1. Creditworthiness & rating implications (based on Rating & Binary Rating).
-        2. Profitability analysis using Gross Margin, Operating Margin, EBIT, and Net Profit Margin.
-        3. Leverage and capital structure insights using Debt/Equity and Long-term Debt/Capital.
-        4. Liquidity analysis with Current Ratio and cash flow per share metrics.
-        5. Returns analysis (ROE, ROA, ROI, Return on Tangible Equity).
-        6. Sector and SIC Code benchmarking insights.
-        7. Risks and forward-looking signals for investors & rating agencies.
-        """
+            Credit Analysis Data:
+            {formatted_data}
+
+            Please provide a detailed professional analysis covering:
+
+            **EXECUTIVE SUMMARY:**
+            - Overall creditworthiness assessment
+            - Key strengths and concerns
+            - Investment recommendation (Buy/Hold/Sell)
+
+            **CREDIT RISK ANALYSIS:**
+            1. Credit score interpretation and rating implications
+            2. News sentiment impact on credit profile
+            3. Risk factor analysis and mitigation strategies
+            4. Comparative analysis vs industry peers
+
+            **FINANCIAL HEALTH INDICATORS:**
+            1. Score component breakdown analysis
+            2. Weight allocation effectiveness
+            3. Risk-adjusted return potential
+            4. Liquidity and solvency indicators
+
+            **MARKET CONTEXT & OUTLOOK:**
+            1. Sector-specific risks and opportunities
+            2. Macroeconomic impact on credit profile
+            3. Forward-looking credit trajectory
+            4. Potential rating migration scenarios
+
+            **ACTIONABLE RECOMMENDATIONS:**
+            1. For investors: portfolio allocation suggestions
+            2. For lenders: credit terms and monitoring
+            3. For management: areas for improvement
+            4. Risk monitoring key metrics
+
+            Please provide specific, actionable insights based on the data provided.
+            """
+        else:
+            # Traditional financial data analysis
+            prompt = f"""
+            You are a financial insights assistant. 
+            Analyze the stock and credit profile for {company_name}.
+
+            Provided Financial & Credit Data:
+            {formatted_data}
+
+            Please generate a professional report covering:
+            1. Creditworthiness & rating implications (based on Rating & Binary Rating).
+            2. Profitability analysis using Gross Margin, Operating Margin, EBIT, and Net Profit Margin.
+            3. Leverage and capital structure insights using Debt/Equity and Long-term Debt/Capital.
+            4. Liquidity analysis with Current Ratio and cash flow per share metrics.
+            5. Returns analysis (ROE, ROA, ROI, Return on Tangible Equity).
+            6. Sector and SIC Code benchmarking insights.
+            7. Risks and forward-looking signals for investors & rating agencies.
+            """
 
         return prompt.strip()
 
@@ -103,7 +143,7 @@ if __name__ == "__main__":
         "ROA - Return On Assets": "19.0%",
         "ROI - Return On Investment": "21.5%",
         "Operating Cash Flow Per Share": "6.15",
-        "Free Cash Flow Per Share": "5.80"
+        "Free Cash Flow Per Share": "5.80",
     }
 
     stock_agent = StockInsightAgent("AAPL")
